@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "id": "source-1",
+      "title": "Refund Policy",
+      "text": "Customers may request a refund within 30 days of purchase.",
+      "supports_claim_ids": ["claim-1"]
+    },
+    {
+      "id": "source-2",
+      "title": "VIP Policy",
+      "text": "VIP customers receive priority support.",
+      "supports_claim_ids": []
+    }
+  ]
+}

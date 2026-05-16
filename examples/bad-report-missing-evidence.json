@@ -1,0 +1,11 @@
+{
+  "task": "research_summary",
+  "subagent_id": "search-agent-1",
+  "claims": [
+    {
+      "id": "claim-3",
+      "text": "Refund requests are processed instantly.",
+      "evidence_ids": ["source-missing"]
+    }
+  ]
+}

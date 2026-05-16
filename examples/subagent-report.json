@@ -1,0 +1,16 @@
+{
+  "task": "research_summary",
+  "subagent_id": "search-agent-1",
+  "claims": [
+    {
+      "id": "claim-1",
+      "text": "The refund policy allows refunds within 30 days.",
+      "evidence_ids": ["source-1"]
+    },
+    {
+      "id": "claim-2",
+      "text": "VIP customers get refunds after 90 days.",
+      "evidence_ids": ["source-2"]
+    }
+  ]
+}
