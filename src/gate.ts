@@ -12,7 +12,7 @@ export type QuarantinedClaim = Claim & {
   reason: QuarantineReason;
 };
 
-export type ContextPacket = {
+export type GateResult = {
   decision: Decision;
   task: string;
   subagent_id: string;
@@ -25,10 +25,12 @@ export type ContextPacket = {
   };
 };
 
+export type ParentContextPacket = Omit<GateResult, "quarantined_claims">;
+
 export function gateReport(
   report: SubagentReport,
   evidence: EvidenceFixture,
-): ContextPacket {
+): GateResult {
   const sourceById = new Map(
     evidence.sources.map((source) => [source.id, source]),
   );
@@ -75,6 +77,18 @@ export function gateReport(
       admitted: admittedCount,
       quarantined: quarantinedCount,
     },
+  };
+}
+
+export function buildParentContextPacket(
+  result: GateResult,
+): ParentContextPacket {
+  return {
+    decision: result.decision,
+    task: result.task,
+    subagent_id: result.subagent_id,
+    admitted_claims: result.admitted_claims,
+    summary: result.summary,
   };
 }
 

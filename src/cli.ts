@@ -2,7 +2,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ZodError } from "zod";
-import { gateReport, type ContextPacket } from "./gate.js";
+import {
+  buildParentContextPacket,
+  gateReport,
+  type GateResult,
+} from "./gate.js";
 import {
   evidenceFixtureSchema,
   subagentReportSchema,
@@ -14,13 +18,16 @@ type CliArgs = {
   reportPath?: string;
   evidencePath?: string;
   outPath?: string;
+  quarantineOutPath?: string;
 };
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
   const args = parseArgs(argv);
 
   if (!args.reportPath || !args.evidencePath) {
-    console.error("Usage: npm run gate -- --report <path> --evidence <path> [--out <path>]");
+    console.error(
+      "Usage: npm run gate -- --report <path> --evidence <path> [--out <path>] [--quarantine-out <path>]",
+    );
     return 1;
   }
 
@@ -33,14 +40,28 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
       args.evidencePath,
       evidenceFixtureSchema.parse,
     );
-    const packet = gateReport(report, evidence);
+    const result = gateReport(report, evidence);
+    const parentContextPacket = buildParentContextPacket(result);
 
     if (args.outPath) {
       await mkdir(dirname(args.outPath), { recursive: true });
-      await writeFile(args.outPath, `${JSON.stringify(packet, null, 2)}\n`);
+      await writeFile(
+        args.outPath,
+        `${JSON.stringify(parentContextPacket, null, 2)}\n`,
+      );
     }
 
-    console.log(formatTerminalReport(packet, args.outPath));
+    if (args.quarantineOutPath) {
+      await mkdir(dirname(args.quarantineOutPath), { recursive: true });
+      await writeFile(
+        args.quarantineOutPath,
+        `${JSON.stringify(result.quarantined_claims, null, 2)}\n`,
+      );
+    }
+
+    console.log(
+      formatTerminalReport(result, args.outPath, args.quarantineOutPath),
+    );
     return 0;
   } catch (error) {
     console.error(formatCliError(error));
@@ -70,6 +91,12 @@ function parseArgs(argv: string[]): CliArgs {
     if (name === "--out") {
       args.outPath = value;
       index += 1;
+      continue;
+    }
+
+    if (name === "--quarantine-out") {
+      args.quarantineOutPath = value;
+      index += 1;
     }
   }
 
@@ -85,32 +112,33 @@ async function readJsonFile<T>(
 }
 
 export function formatTerminalReport(
-  packet: ContextPacket,
+  result: GateResult,
   outPath?: string,
+  quarantineOutPath?: string,
 ): string {
   const lines = [
     "CONTEXTGATE RESULT",
     "",
-    `Task: ${packet.task}`,
-    `Subagent: ${packet.subagent_id}`,
+    `Task: ${result.task}`,
+    `Subagent: ${result.subagent_id}`,
     "",
     "Admitted claims:",
   ];
 
-  if (packet.admitted_claims.length === 0) {
+  if (result.admitted_claims.length === 0) {
     lines.push("- none");
   } else {
-    for (const claim of packet.admitted_claims) {
+    for (const claim of result.admitted_claims) {
       lines.push(`- ${claim.id}: ${claim.text}`);
     }
   }
 
   lines.push("", "Quarantined claims:");
 
-  if (packet.quarantined_claims.length === 0) {
+  if (result.quarantined_claims.length === 0) {
     lines.push("- none");
   } else {
-    for (const claim of packet.quarantined_claims) {
+    for (const claim of result.quarantined_claims) {
       lines.push(`- ${claim.id}: ${claim.text}`);
       lines.push(`  reason: ${claim.reason}`);
     }
@@ -119,9 +147,13 @@ export function formatTerminalReport(
   lines.push("");
 
   if (outPath) {
-    lines.push("Final context packet written to:", outPath);
+    lines.push("Parent context packet written to:", outPath);
   } else {
-    lines.push("Final context packet not written: no --out path provided.");
+    lines.push("Parent context packet not written: no --out path provided.");
+  }
+
+  if (quarantineOutPath) {
+    lines.push("Quarantine artifact written to:", quarantineOutPath);
   }
 
   return lines.join("\n");

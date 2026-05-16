@@ -36,7 +36,38 @@ describe("CLI", () => {
     const packet = JSON.parse(await readFile(outPath, "utf8"));
     expect(packet.decision).toBe("partial");
     expect(packet.admitted_claims).toHaveLength(1);
-    expect(packet.quarantined_claims).toHaveLength(1);
+    expect(packet.quarantined_claims).toBeUndefined();
+    expect(JSON.stringify(packet)).not.toContain(
+      "VIP customers get refunds after 90 days.",
+    );
+  });
+
+  it("writes quarantine claims only to the separate quarantine artifact", async () => {
+    const tempDir = await makeTempDir();
+    const outPath = join(tempDir, "context-packet.json");
+    const quarantineOutPath = join(tempDir, "quarantine.json");
+
+    await execFileAsync(tsxPath, [
+      cliPath,
+      "--report",
+      "examples/subagent-report.json",
+      "--evidence",
+      "examples/evidence.json",
+      "--out",
+      outPath,
+      "--quarantine-out",
+      quarantineOutPath,
+    ]);
+
+    const packet = JSON.parse(await readFile(outPath, "utf8"));
+    const quarantine = JSON.parse(await readFile(quarantineOutPath, "utf8"));
+
+    expect(packet.quarantined_claims).toBeUndefined();
+    expect(quarantine).toHaveLength(1);
+    expect(quarantine[0]).toMatchObject({
+      id: "claim-2",
+      reason: "NO_SUPPORTING_SOURCE",
+    });
   });
 
   it("exits nonzero for invalid JSON", async () => {

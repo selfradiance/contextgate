@@ -1,8 +1,8 @@
 # ContextGate
 
-ContextGate is a tiny local TypeScript CLI proof for parent-agent context admission.
+ContextGate is a tiny local deterministic TypeScript CLI proof for parent-agent context admission.
 
-It takes a subagent report, checks each claim against explicit evidence fixtures, and writes a parent-context packet that includes only admitted claims. Unsupported subagent claims are blocked before they enter parent context and are quarantined instead.
+It takes a subagent report, checks each claim against explicit evidence fixtures, and writes a parent-context packet that includes only admitted claims. Unsupported subagent claims are blocked before they enter parent context. If requested, they are written to a separate quarantine artifact.
 
 ## What It Proves
 
@@ -28,6 +28,12 @@ This is a before-action harness-governance proof because it focuses on the rules
 
 The gate runs before parent-context admission. It gives the harness a deterministic checkpoint between subagent output and parent-agent context.
 
+## Build Rule
+
+Every harness-governance repo should prove one narrow seam: context admission, tool admission, memory admission, compression audit, subagent boundary, credential boundary, or hook enforcement.
+
+ContextGate proves only context admission. It should not grow into a broad AgentHarness framework.
+
 ## Relationship To AgentGate
 
 AgentGate handles after-action accountability.
@@ -43,7 +49,7 @@ npm install
 npm test
 npm run typecheck
 npm run build
-npm run gate -- --report examples/subagent-report.json --evidence examples/evidence.json --out .contextgate/context-packet.json
+npm run gate -- --report examples/subagent-report.json --evidence examples/evidence.json --out .contextgate/context-packet.json --quarantine-out .contextgate/quarantine.json
 ```
 
 ## Example Terminal Output
@@ -61,8 +67,10 @@ Quarantined claims:
 - claim-2: VIP customers get refunds after 90 days.
   reason: NO_SUPPORTING_SOURCE
 
-Final context packet written to:
+Parent context packet written to:
 .contextgate/context-packet.json
+Quarantine artifact written to:
+.contextgate/quarantine.json
 ```
 
 ## Honest Limitations

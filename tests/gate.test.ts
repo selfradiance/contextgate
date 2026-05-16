@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gateReport } from "../src/gate.js";
+import { buildParentContextPacket, gateReport } from "../src/gate.js";
 import type { EvidenceFixture, SubagentReport } from "../src/schemas.js";
 
 const evidence: EvidenceFixture = {
@@ -126,6 +126,32 @@ describe("gateReport", () => {
     );
 
     expect(packet.decision).toBe("deny");
+  });
+
+  it("keeps unsupported claim text out of the parent context packet", () => {
+    const result = gateReport(
+      makeReport([
+        {
+          id: "claim-1",
+          text: "The refund policy allows refunds within 30 days.",
+          evidence_ids: ["source-1"],
+        },
+        {
+          id: "claim-2",
+          text: "VIP customers get refunds after 90 days.",
+          evidence_ids: ["source-2"],
+        },
+      ]),
+      evidence,
+    );
+
+    const parentContextPacket = buildParentContextPacket(result);
+    const serializedPacket = JSON.stringify(parentContextPacket);
+
+    expect(parentContextPacket).not.toHaveProperty("quarantined_claims");
+    expect(serializedPacket).not.toContain(
+      "VIP customers get refunds after 90 days.",
+    );
   });
 });
 
