@@ -1,0 +1,7 @@
+{
+  "summary": "The task remains local: keep human approval before action and do not send email.",
+  "preserved_constraint_ids": [
+    "keep_human_approval_required",
+    "do_not_send_email"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "context_id": "email-approval-budget-context",
+  "required_constraints": [
+    {
+      "id": "keep_human_approval_required",
+      "text": "Human approval is required before action."
+    },
+    {
+      "id": "do_not_send_email",
+      "text": "Do not send email from this harness."
+    },
+    {
+      "id": "preserve_budget_limit",
+      "text": "The budget limit is USD 500."
+    }
+  ]
+}

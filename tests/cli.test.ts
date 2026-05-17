@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -89,6 +89,65 @@ describe("CLI", () => {
   it("exits nonzero for missing required args", async () => {
     await expect(execFileAsync(tsxPath, [cliPath])).rejects.toMatchObject({
       code: 1,
+    });
+  });
+
+  it("admits a compressed summary when required constraint ids survived", async () => {
+    const tempDir = await makeTempDir();
+    const outPath = join(tempDir, "compressed-context.json");
+
+    const { stdout } = await execFileAsync(tsxPath, [
+      cliPath,
+      "audit-compression",
+      "--original",
+      "examples/original-context.json",
+      "--summary",
+      "examples/compressed-summary-valid.json",
+      "--out",
+      outPath,
+    ]);
+
+    const packet = JSON.parse(await readFile(outPath, "utf8"));
+
+    expect(stdout).toContain("Decision: ALLOW");
+    expect(packet).toMatchObject({
+      decision: "allow",
+      preserved_constraint_ids: [
+        "keep_human_approval_required",
+        "do_not_send_email",
+        "preserve_budget_limit",
+      ],
+    });
+  });
+
+  it("rejects a compressed summary when a required constraint id is missing", async () => {
+    const tempDir = await makeTempDir();
+    const outPath = join(tempDir, "compressed-context.json");
+    const rejectedOutPath = join(tempDir, "compression-rejected.json");
+    await writeFile(outPath, "stale admitted packet");
+
+    const { stdout } = await execFileAsync(tsxPath, [
+      cliPath,
+      "audit-compression",
+      "--original",
+      "examples/original-context.json",
+      "--summary",
+      "examples/compressed-summary-missing-constraint.json",
+      "--out",
+      outPath,
+      "--rejected-out",
+      rejectedOutPath,
+    ]);
+
+    const rejected = JSON.parse(await readFile(rejectedOutPath, "utf8"));
+
+    expect(stdout).toContain("Decision: DENY");
+    expect(stdout).toContain("preserve_budget_limit");
+    await expect(access(outPath)).rejects.toThrow();
+    expect(rejected).toMatchObject({
+      decision: "deny",
+      reason: "MISSING_REQUIRED_CONSTRAINTS",
+      missing_constraint_ids: ["preserve_budget_limit"],
     });
   });
 });
