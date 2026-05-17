@@ -1,18 +1,24 @@
 # ContextGate
 
-ContextGate is a tiny local deterministic TypeScript CLI proof for parent-agent context admission.
+ContextGate is a tiny local TypeScript CLI for deterministic context-admission checks. It currently contains two narrow proofs: unsupported claim admission and compression constraint survival.
 
-In v0.1, it takes a subagent report, checks each claim against explicit evidence fixtures, and writes a parent-context packet that includes only admitted claims. Unsupported subagent claims are blocked before they enter parent context. If requested, they are written to a separate quarantine artifact.
+It does not call LLMs, use a network, run a server, integrate with MCP, or integrate with AgentGate.
 
-In v0.2, it adds one narrow Compression Audit seam: a compressed summary is admitted only when every required constraint id from the original context appears in `preserved_constraint_ids`.
+## Current Proofs
 
-## What It Proves
+1. **v0.1.0 — Unsupported Claim Admission Gate**
 
-ContextGate proves narrow deterministic admission checks.
+Unsupported subagent claims should not enter the parent context packet.
 
-v0.1 proves:
+The CLI takes a subagent report, checks each claim against explicit evidence fixtures, and writes a parent-context packet that includes only admitted claims. Unsupported claims are blocked before they enter parent context. If requested, blocked claims are written to a separate quarantine artifact.
 
-> A harness can require explicit evidence linkage before a subagent claim is admitted into parent context.
+2. **v0.2.0 — Compression Audit**
+
+A compressed context summary should not be admitted if required constraints from the original context were dropped.
+
+The CLI takes an original context fixture and a compressed summary fixture. The compressed summary is admitted only when every required constraint id from the original context appears in `preserved_constraint_ids`.
+
+## Deterministic Rules
 
 In v0.1.0, a claim is admitted only when:
 
@@ -24,21 +30,19 @@ In v0.2.0, a compressed summary is admitted only when every required constraint 
 
 ## What It Does Not Prove
 
-ContextGate is not a full agent harness. It is not a truth engine. It does not know whether a sentence is true.
+ContextGate is not a full agent harness, an agent framework, or a general agent-safety system. It is not a truth engine. It does not know whether a sentence is true.
 
-It does not call LLMs, verify natural language meaning, use a database, run a server, integrate MCP, or connect to any agent framework.
+It does not call LLMs, verify natural language meaning, verify semantic compression quality, use fuzzy similarity scoring, use embeddings, use a database, run a server, integrate MCP, integrate AgentGate, enforce runtime policy, or connect to any agent framework.
 
-## Harness-Governance Proof
+## Local Admission Proofs
 
-This is a before-action harness-governance proof because it focuses on the rules around what an agent system is allowed to place into shared context.
+ContextGate focuses only on what is allowed into a parent context packet.
 
-The gate runs before parent-context admission. It gives the harness a deterministic checkpoint between subagent output and parent-agent context.
+Both checks run before parent-context admission. They provide deterministic local checkpoints between an input artifact and the parent-context artifact.
 
-## Build Rule
+## Scope Rule
 
-Every harness-governance repo should prove one narrow seam: context admission, tool admission, memory admission, compression audit, subagent boundary, credential boundary, or hook enforcement.
-
-ContextGate v0.2 proves only two narrow seams: v0.1 context admission and v0.2 compression audit. It should not grow into a broad AgentHarness framework.
+ContextGate v0.2 ships exactly two narrow local proofs: v0.1 unsupported claim admission and v0.2 compression audit. It should not grow into a broad agent harness or framework.
 
 ## v0.2 Compression Audit
 
@@ -97,8 +101,23 @@ npm install
 npm test
 npm run typecheck
 npm run build
+```
+
+Run the v0.1 unsupported-claim admission gate:
+
+```bash
 npm run gate -- --report examples/subagent-report.json --evidence examples/evidence.json --out .contextgate/context-packet.json --quarantine-out .contextgate/quarantine.json
+```
+
+Run the v0.2 compression audit ALLOW path:
+
+```bash
 npm run audit-compression -- --original examples/original-context.json --summary examples/compressed-summary-valid.json --out .contextgate/compressed-context.json
+```
+
+Run the v0.2 compression audit DENY path:
+
+```bash
 npm run audit-compression -- --original examples/original-context.json --summary examples/compressed-summary-missing-constraint.json --out .contextgate/compressed-context.json --rejected-out .contextgate/compression-rejected.json
 ```
 
